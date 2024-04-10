@@ -19,7 +19,7 @@ class OddsPortalScrapper:
     
     def __initialize_webdriver(self):
         chrome_options = webdriver.ChromeOptions()
-        #chrome_options.add_argument("--headless")
+        chrome_options.add_argument("--headless")
         chrome_options.add_argument("--unlimited-storage")
         chrome_options.add_argument("--full-memory-crash-report")
         chrome_options.add_argument("--disable-gpu")
