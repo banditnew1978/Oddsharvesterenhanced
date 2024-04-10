@@ -7,7 +7,7 @@ from data_storage import DataStorage
 
 def get_current_date_time_string():
     now = datetime.now()
-    date_time_string = now.strftime('%m-%d %H:%M')
+    date_time_string = now.strftime('%Y-%m-%d %H:%M:%S')
     return date_time_string
 
 def lambda_handler(event, context):
@@ -18,7 +18,7 @@ def get_odds_portal_historic_odds():
     league_name = "ligue-1"
     file_path = f"{league_name}_{season}_{get_current_date_time_string()}.json"
     odds_portal_scrapper = OddsPortalScrapper(league=league_name)
-    scrapped_historic_odds = odds_portal_scrapper.get_historic_odds(season=season, nbr_of_pages=1)
+    scrapped_historic_odds = odds_portal_scrapper.get_historic_odds(season=season)
     LOGGER.info(f"Historic odds have been scrapped: {scrapped_historic_odds}")
     flattened_historic_odds = [item for sublist in scrapped_historic_odds for item in sublist]
     storage = DataStorage(file_path)

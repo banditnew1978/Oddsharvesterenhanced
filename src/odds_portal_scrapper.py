@@ -41,8 +41,8 @@ class OddsPortalScrapper:
 
             if new_height == last_height:
                 break
-            last_height = new_height
 
+            last_height = new_height
             if time.time() > end_time:
                 break
 
@@ -50,9 +50,6 @@ class OddsPortalScrapper:
         base_url = LEAGUES_URLS_MAPPING.get(self.league)
         if not base_url:
             raise ValueError(f"URL mapping not found for league: {self.league}")
-    
-        if self.league in ['mls', 'brazil-serie-a', 'premier-league', 'serie-a', 'liga', 'bundesliga', 'championship', 'liga-portugal', 'eredivisie']:
-            return f"{base_url}/results/"
         else:
             try:
                 season_components = season.split("-")
@@ -149,7 +146,7 @@ class OddsPortalScrapper:
         except Exception as e:
             LOGGER.error(f"Extracting data or setting odds format: {e}")
 
-    def __scrape_odds_historic(self, nbr_of_pages: int):
+    def __scrape_odds_historic(self, nbr_of_pages: int = None):
         historic_odds = []
         pagination_links = self.driver.find_elements(By.CSS_SELECTOR, "a.pagination-link")
         pages = [link.text for link in pagination_links]
@@ -171,8 +168,7 @@ class OddsPortalScrapper:
                     historic_odds.append(odds_data)
                 except Exception as error:
                     LOGGER.error(f"error: {error}")
-                finally:
-                    return historic_odds
+        return historic_odds
 
     def get_historic_odds(self, season: str, nbr_of_pages: int = None):
         LOGGER.info(f"Will grab historic odds for season: {season}")
@@ -182,7 +178,7 @@ class OddsPortalScrapper:
             historic_odds = self.__scrape_odds_historic(nbr_of_pages=nbr_of_pages)
             return historic_odds
         except Exception as error:
-            LOGGER.error(f"error: {error}")
+            LOGGER.error(f"Error: {error}")
         finally:
             self.driver.quit()
     

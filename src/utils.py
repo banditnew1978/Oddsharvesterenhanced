@@ -9,7 +9,8 @@ LEAGUES_URLS_MAPPING = {
     "brazil-serie-a": "https://www.oddsportal.com/football/brazil/serie-a",
     "liga-mx": "https://www.oddsportal.com/football/mexico/liga-de-expansion-mx",
     "liga-portugal": "https://www.oddsportal.com/football/portugal/liga-portugal",
-    "eredivisie": "https://www.oddsportal.com/football/netherlands/eredivisie"
+    "eredivisie": "https://www.oddsportal.com/football/netherlands/eredivisie",
+    "champions-league": "https://www.oddsportal.com/football/europe/champions-league"
 }
 
 FRENCH_ODDS_SCRAPPER_LEAGUE_URLS_MAPPING = {
