@@ -8,7 +8,6 @@ from selenium import webdriver
 
 class OddsPortalOddsExtractor:
     def __init__(self, driver):
-        LOGGER.info(f"Initialize OddsPortalOddsExtractor")
         self.driver = driver
     
     def __scroll_to_element(self, by, identifier):

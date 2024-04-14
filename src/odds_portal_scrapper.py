@@ -46,10 +46,13 @@ class OddsPortalScrapper:
             if time.time() > end_time:
                 break
 
-    def __get_base_url(self, season: str) -> str:
+    def __get_base_url(self, season: str = None) -> str:
         base_url = LEAGUES_URLS_MAPPING.get(self.league)
         if not base_url:
             raise ValueError(f"URL mapping not found for league: {self.league}")
+        
+        if not season:
+            return base_url
         else:
             try:
                 season_components = season.split("-")
@@ -171,7 +174,7 @@ class OddsPortalScrapper:
         return historic_odds
 
     def get_historic_odds(self, season: str, nbr_of_pages: int = None):
-        LOGGER.info(f"Will grab historic odds for season: {season}")
+        LOGGER.info(f"Will grab historic odds for season: {season} and league: {self.league}")
         try:
             base_url = self.__get_base_url(season=season)
             self.driver.get(base_url)
@@ -183,4 +186,13 @@ class OddsPortalScrapper:
             self.driver.quit()
     
     def get_next_matchs_odds(self):
-        LOGGER.info(f"Will grab next matchs odds")
+        LOGGER.info(f"Will grab next matchs odds for league: {self.league}")
+        try:
+            base_url = self.__get_base_url()
+            self.driver.get(base_url)
+            next_matchs_odds = self.__scrape_odds()
+            return next_matchs_odds
+        except Exception as error:
+            LOGGER.error(f"Error: {error}")
+        finally:
+            self.driver.quit()

@@ -39,3 +39,6 @@ secrets.json
 
 # Conda
 conda_packages.txt
+
+# Data
+data/
