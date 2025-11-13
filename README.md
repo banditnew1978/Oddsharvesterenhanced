@@ -27,6 +27,7 @@ OddsHarvester is an application designed to scrape and process sports betting od
 - **📊 Scrape Historical Odds**: Retrieve historical odds and match results for analytical purposes.
 - **🔍 Advanced Parsing**: Extract structured data, including match dates, team names, scores, and venue details.
 - **💾 Flexible Storage**: Store scraped data in JSON or CSV locally, or upload it directly to a remote S3 bucket.
+- **📂 Incremental Exports**: Historical link collection writes each batch to timestamped CSV files under `capturelinks/` so partial runs are preserved.
 - **🐳 Docker Compatibility**: Designed to work seamlessly inside Docker containers with minimal setup.
 - **🕵️ Proxy Support**: Route web requests through SOCKS/HTTP proxies for enhanced anonymity, geolocation bypass, and anti-blocking measures.
 
@@ -229,6 +230,21 @@ Retrieve historical odds and results for analytical purposes.
 - **Scrapes historical odds in preview mode (average odds only, faster):**
 
 `uv run python src/main.py scrape_historic --sport football --leagues england-premier-league --season 2022-2023 --markets over_under_2_5 --preview_submarkets_only --headless`
+
+#### **3. Capture Match Links Only**
+
+Need only the match URLs without odds data? Use the standalone helper script in the project root:
+
+```bash
+uv run python capture_links.py --sport football \
+  --leagues england-premier-league \
+  --seasons 2014-2015,2015-2016,2016-2017 \
+  --headless
+```
+
+- Saves unique links per league/season combination into timestamped CSV files under `capturelinks/`.
+- Respects the same pagination analysis as full scraping, but stops after collecting links.
+- Supports optional flags such as `--max-pages`, `--browser-user-agent`, `--browser-locale-timezone`, and `--browser-timezone-id`.
 
 #### **📌 Preview Mode**
 
