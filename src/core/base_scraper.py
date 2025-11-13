@@ -1,5 +1,7 @@
 import asyncio
+from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
+import inspect
 import json
 import logging
 import re
@@ -33,7 +35,9 @@ class BaseScraper:
             playwright_manager (PlaywrightManager): Handles Playwright lifecycle.
             browser_helper (BrowserHelper): Helper class for browser interactions.
             market_extractor (OddsPortalMarketExtractor): Handles market scraping.
-            preview_submarkets_only (bool): If True, only scrape average odds from visible submarkets without loading individual bookmaker details.
+            preview_submarkets_only (bool):
+                If True, only scrape average odds from visible submarkets without
+                loading individual bookmaker details.
         """
         self.logger = logging.getLogger(self.__class__.__name__)
         self.playwright_manager = playwright_manager
@@ -125,6 +129,7 @@ class BaseScraper:
         target_bookmaker: str | None = None,
         concurrent_scraping_task: int = 3,
         preview_submarkets_only: bool = False,
+        on_match_scraped: Callable[[dict[str, Any]], Awaitable[None] | None] | None = None,
     ) -> list[dict[str, Any]]:
         """
         Extract odds for a list of match links concurrently.
@@ -132,11 +137,16 @@ class BaseScraper:
         Args:
             sport (str): The sport to scrape odds for.
             match_links (List[str]): A list of match links to scrape odds for.
-            markets (Optional[List[str]]: The list of markets to scrape.
+            markets (Optional[List[str]]): The list of markets to scrape.
             scrape_odds_history (bool): Whether to scrape and attach odds history.
             target_bookmaker (str): If set, only scrape odds for this bookmaker.
             concurrent_scraping_task (int): Controls how many pages are processed simultaneously.
-            preview_submarkets_only (bool): If True, only scrape average odds from visible submarkets without loading individual bookmaker details.
+            preview_submarkets_only (bool):
+                If True, only scrape average odds from visible submarkets without
+                loading individual bookmaker details.
+            on_match_scraped (Optional[Callable[[dict[str, Any]], Awaitable[None] | None]]):
+                Callback invoked after each match is scraped. Can be synchronous or
+                asynchronous; awaited when necessary.
 
         Returns:
             List[Dict[str, Any]]: A list of dictionaries containing scraped odds data.
@@ -161,6 +171,18 @@ class BaseScraper:
                         preview_submarkets_only=preview_submarkets_only,
                     )
                     self.logger.info(f"Successfully scraped match link: {link}")
+                    if data and on_match_scraped:
+                        try:
+                            callback_result = on_match_scraped(data)
+                            if inspect.isawaitable(callback_result):
+                                await callback_result
+                        except Exception as callback_error:
+                            self.logger.error(
+                                "Error executing on_match_scraped callback for link %s: %s",
+                                link,
+                                callback_error,
+                                exc_info=True,
+                            )
                     return data
 
                 except Exception as e:
@@ -202,7 +224,9 @@ class BaseScraper:
             markets (Optional[List[str]]): A list of markets to scrape (e.g., ['1x2', 'over_under_2_5']).
             scrape_odds_history (bool): Whether to scrape and attach odds history.
             target_bookmaker (str): If set, only scrape odds for this bookmaker.
-            preview_submarkets_only (bool): If True, only scrape average odds from visible submarkets without loading individual bookmaker details.
+            preview_submarkets_only (bool):
+                If True, only scrape average odds from visible submarkets without
+                loading individual bookmaker details.
 
         Returns:
             Optional[Dict[str, Any]]: A dictionary containing scraped data, or None if scraping fails.
@@ -223,6 +247,8 @@ class BaseScraper:
                     f"No match details found for {match_link} - page may be unavailable or structure changed"
                 )
                 return None
+
+            match_details["link"] = match_link
 
             if markets:
                 self.logger.info(f"Scraping markets: {markets}")

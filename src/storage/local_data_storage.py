@@ -25,8 +25,36 @@ class LocalDataStorage:
         self.default_file_path = default_file_path
         self.default_storage_format = default_storage_format
 
+    def resolve_target_file_path(
+        self, file_path: str | None, storage_format: StorageFormat | str | None
+    ) -> tuple[str, str]:
+        """
+        Determine the final file path (with extension) and normalized format string.
+        """
+        target_file_path = file_path or self.default_file_path
+
+        if isinstance(storage_format, StorageFormat):
+            format_to_use = storage_format.value
+        elif isinstance(storage_format, str):
+            format_to_use = storage_format.lower()
+        elif storage_format is None:
+            format_to_use = self.default_storage_format.value
+        else:
+            raise ValueError("Unsupported storage_format type provided.")
+
+        valid_formats = {f.value for f in StorageFormat}
+        if format_to_use not in valid_formats:
+            raise ValueError(
+                f"Invalid storage format. Supported formats are: {', '.join(sorted(valid_formats))}."
+            )
+
+        if not target_file_path.endswith(f".{format_to_use}"):
+            target_file_path = f"{target_file_path}.{format_to_use}"
+
+        return target_file_path, format_to_use
+
     def save_data(
-        self, data: dict | list[dict], file_path: str | None = None, storage_format: StorageFormat | None = None
+        self, data: dict | list[dict], file_path: str | None = None, storage_format: StorageFormat | str | None = None
     ):
         """
         Save scraped data to a local CSV file.
@@ -47,16 +75,9 @@ class LocalDataStorage:
         if not isinstance(data, list) or not all(isinstance(item, dict) for item in data):
             raise ValueError("Data must be a dictionary or a list of dictionaries.")
 
-        target_file_path = file_path or self.default_file_path
-        format_to_use = storage_format.lower() if storage_format else self.default_storage_format.value
-
-        if format_to_use not in [f.value for f in StorageFormat]:
-            raise ValueError(
-                f"Invalid storage format. Supported formats are: {', '.join(f.value for f in StorageFormat)}."
-            )
-
-        if not target_file_path.endswith(f".{format_to_use}"):
-            target_file_path = f"{target_file_path}.{format_to_use}"
+        target_file_path, format_to_use = self.resolve_target_file_path(
+            file_path=file_path, storage_format=storage_format
+        )
 
         self._ensure_directory_exists(target_file_path)
 
@@ -66,6 +87,40 @@ class LocalDataStorage:
             self._save_as_json(data, target_file_path)
         else:
             raise ValueError("Unsupported file format.")
+
+    def append_json_record(
+        self, record: dict, file_path: str | None = None, storage_format: StorageFormat | str | None = None
+    ):
+        """Append a single record to a JSON file, creating it if necessary."""
+        if not isinstance(record, dict):
+            raise ValueError("Record must be a dictionary.")
+
+        target_file_path, format_to_use = self.resolve_target_file_path(
+            file_path=file_path, storage_format=storage_format
+        )
+
+        if format_to_use != StorageFormat.JSON.value:
+            raise ValueError("append_json_record is only supported for JSON format.")
+
+        self._ensure_directory_exists(target_file_path)
+        self._save_as_json([record], target_file_path)
+
+    def reset_json_file(
+        self, file_path: str | None = None, storage_format: StorageFormat | str | None = None
+    ) -> str:
+        """Create or truncate the target JSON file to an empty array."""
+        target_file_path, format_to_use = self.resolve_target_file_path(
+            file_path=file_path, storage_format=storage_format
+        )
+
+        if format_to_use != StorageFormat.JSON.value:
+            raise ValueError("reset_json_file is only supported for JSON format.")
+
+        self._ensure_directory_exists(target_file_path)
+        with open(target_file_path, "w", encoding="utf-8") as file:
+            json.dump([], file, indent=4)
+
+        return target_file_path
 
     def _save_as_csv(self, data: list[dict], file_path: str):
         """Save data in CSV format."""

@@ -1,5 +1,9 @@
+import csv
+from datetime import datetime
+from pathlib import Path
 import random
 from typing import Any
+from urllib.parse import urlparse
 
 from playwright.async_api import Page
 
@@ -368,4 +372,39 @@ class OddsPortalScraper(BaseScraper):
         if failed_pages > 0:
             self.logger.warning(f"{failed_pages} pages failed during link collection")
 
+        self._save_collected_links(base_url=base_url, links=unique_links)
+
         return unique_links
+
+    def _save_collected_links(self, base_url: str, links: list[str]) -> None:
+        """Persist collected match links to capturelinks directory."""
+        if not links:
+            self.logger.info("No match links to save; skipping CSV export.")
+            return
+
+        try:
+            project_root = Path(__file__).resolve().parent.parent.parent
+            capture_dir = project_root / "capturelinks"
+            capture_dir.mkdir(parents=True, exist_ok=True)
+
+            parsed_url = urlparse(base_url)
+            base_slug = parsed_url.path.strip("/") or "links"
+            sanitized_slug = base_slug.replace("/", "_").replace(" ", "-")
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            file_path = capture_dir / f"{sanitized_slug}_{timestamp}.csv"
+
+            with file_path.open("w", newline="", encoding="utf-8") as csv_file:
+                writer = csv.writer(csv_file)
+                writer.writerow(["match_link"])
+                for link in sorted(set(links)):
+                    writer.writerow([link])
+
+            self.logger.info(
+                "Saved %s collected match links to %s", len(set(links)), file_path
+            )
+        except Exception as error:  # pragma: no cover - logging path
+            self.logger.error(
+                "Failed to save collected match links: %s",
+                error,
+                exc_info=True,
+            )
