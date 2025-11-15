@@ -269,6 +269,22 @@ The `--preview_submarkets_only` flag enables a faster scraping mode that extract
 To display all available CLI commands and options, run:
 
 `uv run python src/main.py --help`
+Selenium ile sadece linkleri alma
+
+pip install selenium beautifulsoup4 lxml
+
+Örnek komutlar:
+Headless mod:
+
+python selenium_capture_links.py --sport football --leagues england-premier-league --seasons 2014-2015 --headless
+
+İlk 3 sayfayla sınırla:
+
+python selenium_capture_links.py --sport football --leagues england-premier-league --seasons 2014-2015 --max-pages 3 --headless
+
+Birden çok lig ve sezon (virgülle ayırın):
+
+python selenium_capture_links.py --sport football --leagues england-premier-league,spain-primera-division --seasons 2014-2015,2015-2016 --headless
 
 ### **🐳 Running Inside a Docker Container**
 
