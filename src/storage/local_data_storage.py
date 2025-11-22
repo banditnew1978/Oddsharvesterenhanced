@@ -85,6 +85,8 @@ class LocalDataStorage:
             self._save_as_csv(data, target_file_path)
         elif format_to_use == StorageFormat.JSON.value:
             self._save_as_json(data, target_file_path)
+        elif format_to_use == StorageFormat.JSONL.value:
+            self._save_as_jsonl(data, target_file_path)
         else:
             raise ValueError("Unsupported file format.")
 
@@ -113,12 +115,17 @@ class LocalDataStorage:
             file_path=file_path, storage_format=storage_format
         )
 
-        if format_to_use != StorageFormat.JSON.value:
-            raise ValueError("reset_json_file is only supported for JSON format.")
-
-        self._ensure_directory_exists(target_file_path)
-        with open(target_file_path, "w", encoding="utf-8") as file:
-            json.dump([], file, indent=4)
+        if format_to_use == StorageFormat.JSON.value:
+            self._ensure_directory_exists(target_file_path)
+            with open(target_file_path, "w", encoding="utf-8") as file:
+                json.dump([], file, indent=4)
+        elif format_to_use == StorageFormat.JSONL.value:
+            # Truncate to empty file for JSONL
+            self._ensure_directory_exists(target_file_path)
+            with open(target_file_path, "w", encoding="utf-8") as file:
+                file.write("")
+        else:
+            raise ValueError("reset_json_file is only supported for JSON/JSONL format.")
 
         return target_file_path
 
@@ -139,6 +146,31 @@ class LocalDataStorage:
         except Exception as e:
             self.logger.error(f"Error saving data to {file_path}: {e!s}", exc_info=True)
             raise
+
+    def _save_as_jsonl(self, data: list[dict], file_path: str):
+        """Save data in JSON Lines format (one JSON per line)."""
+        try:
+            with open(file_path, "a", encoding="utf-8") as file:
+                for item in data:
+                    file.write(json.dumps(item, ensure_ascii=False) + "\n")
+            self.logger.info(f"Successfully appended {len(data)} JSONL line(s) to {file_path}")
+        except Exception as e:
+            self.logger.error(f"Error appending JSONL to {file_path}: {e!s}", exc_info=True)
+            raise
+
+    def append_jsonl_record(
+        self, record: dict, file_path: str | None = None, storage_format: StorageFormat | str | None = None
+    ):
+        """Append a single record as a JSONL line."""
+        if not isinstance(record, dict):
+            raise ValueError("Record must be a dictionary.")
+        target_file_path, format_to_use = self.resolve_target_file_path(
+            file_path=file_path, storage_format=storage_format
+        )
+        if format_to_use != StorageFormat.JSONL.value:
+            raise ValueError("append_jsonl_record is only supported for JSONL format.")
+        self._ensure_directory_exists(target_file_path)
+        self._save_as_jsonl([record], target_file_path)
 
     def _save_as_json(self, data: list[dict], file_path: str):
         """Save data in JSON format."""

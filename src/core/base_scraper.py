@@ -170,7 +170,10 @@ class BaseScraper:
                         target_bookmaker=target_bookmaker,
                         preview_submarkets_only=preview_submarkets_only,
                     )
-                    self.logger.info(f"Successfully scraped match link: {link}")
+                    if data:
+                        self.logger.info(f"Successfully scraped match link: {link}")
+                    else:
+                        self.logger.warning(f"No data returned for link: {link}")
                     if data and on_match_scraped:
                         try:
                             callback_result = on_match_scraped(data)
@@ -234,8 +237,12 @@ class BaseScraper:
         self.logger.info(f"Scraping match: {match_link}")
 
         try:
-            # Navigate to the match page with extended timeout
-            await page.goto(match_link, timeout=15000, wait_until="domcontentloaded")
+            # Navigate to the match page with extended timeout and retry once on timeout
+            try:
+                await page.goto(match_link, timeout=30000, wait_until="domcontentloaded")
+            except TimeoutError:
+                self.logger.warning(f"First navigation timeout for {match_link}, retrying with longer timeout...")
+                await page.goto(match_link, timeout=45000, wait_until="domcontentloaded")
 
             # Wait a bit for dynamic content to load
             await page.wait_for_timeout(2000)

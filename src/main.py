@@ -35,6 +35,10 @@ def main():
                 scrape_odds_history=args["scrape_odds_history"],
                 headless=args["headless"],
                 preview_submarkets_only=args["preview_submarkets_only"],
+                storage_type=args["storage_type"],
+                storage_format=args["storage_format"],
+                file_path=args["file_path"],
+                concurrency_tasks=args["concurrency_tasks"],
             )
         )
 

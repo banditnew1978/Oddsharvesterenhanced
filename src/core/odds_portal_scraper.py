@@ -169,6 +169,8 @@ class OddsPortalScraper(BaseScraper):
         markets: list[str] | None = None,
         scrape_odds_history: bool = False,
         target_bookmaker: str | None = None,
+        on_match_scraped=None,
+        concurrent_scraping_task: int = 3,
     ) -> list[dict[str, Any]]:
         """
         Scrapes match odds from a list of specific match URLs.
@@ -195,8 +197,9 @@ class OddsPortalScraper(BaseScraper):
             markets=markets,
             scrape_odds_history=scrape_odds_history,
             target_bookmaker=target_bookmaker,
-            concurrent_scraping_task=len(match_links),
+            concurrent_scraping_task=concurrent_scraping_task,
             preview_submarkets_only=self.preview_submarkets_only,
+            on_match_scraped=on_match_scraped,
         )
 
     async def _prepare_page_for_scraping(self, page: Page):

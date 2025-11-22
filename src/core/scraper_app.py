@@ -48,6 +48,10 @@ async def run_scraper(
     scrape_odds_history: bool = False,
     headless: bool = True,
     preview_submarkets_only: bool = False,
+    storage_type: str | None = None,
+    storage_format: str | None = None,
+    file_path: str | None = None,
+    concurrency_tasks: int | None = None,
 ) -> dict:
     """Runs the scraping process and handles execution."""
     logger.info(
@@ -87,6 +91,29 @@ async def run_scraper(
                 Scraping specific matches: {match_links} for sport: {sport}, markets={markets},
                 scrape_odds_history={scrape_odds_history}, target_bookmaker={target_bookmaker}
             """)
+            # Optional streaming writer for per-record durability
+            on_match_scraped_cb = None
+            try:
+                if storage_format in ("jsonl", "json") and file_path:
+                    from src.storage.local_data_storage import LocalDataStorage
+                    from src.storage.storage_format import StorageFormat as SF
+
+                    local_store = LocalDataStorage()
+                    # Prepare/clear target file for streaming
+                    fmt_enum = SF.JSONL.value if storage_format == "jsonl" else SF.JSON.value
+                    local_store.reset_json_file(file_path=file_path, storage_format=fmt_enum)
+
+                    def on_match_scraped_cb(record: dict):
+                        try:
+                            if storage_format == "jsonl":
+                                local_store.append_jsonl_record(record=record, file_path=file_path, storage_format=SF.JSONL)
+                            else:
+                                local_store.append_json_record(record=record, file_path=file_path, storage_format=SF.JSON)
+                        except Exception as write_err:
+                            logger.error(f"Streaming write failed: {write_err}", exc_info=True)
+            except Exception as stream_err:
+                logger.warning(f"Streaming writer initialization failed: {stream_err}")
+
             return await retry_scrape(
                 scraper.scrape_matches,
                 match_links=match_links,
@@ -94,6 +121,8 @@ async def run_scraper(
                 markets=markets,
                 scrape_odds_history=scrape_odds_history,
                 target_bookmaker=target_bookmaker,
+                on_match_scraped=on_match_scraped_cb,
+                concurrent_scraping_task=(concurrency_tasks or 3),
             )
 
         if command == CommandEnum.HISTORIC:

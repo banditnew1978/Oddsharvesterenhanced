@@ -245,22 +245,47 @@ uv run python capture_links.py --sport football \
 - Saves unique links per league/season combination into timestamped CSV files under `capturelinks/`.
 - Respects the same pagination analysis as full scraping, but stops after collecting links.
 - Supports optional flags such as `--max-pages`, `--browser-user-agent`, `--browser-locale-timezone`, and `--browser-timezone-id`.
-- Selenium ile sadece linkleri alma
 
-pip install selenium beautifulsoup4 lxml
+#### **4. Using `--match_links` with CSV + Per-Record Streaming Output**
 
-Örnek komutlar:
-Headless mod:
+You can provide `--match_links` either as a list of URLs or as a single path to a CSV file. When a CSV path is given, the CLI will read links from:
 
-python selenium_capture_links.py --sport football --leagues england-premier-league --seasons 2014-2015 --headless
+- A column named `match_link` if present, otherwise
+- The first column in the CSV.
 
-İlk 3 sayfayla sınırla:
+When `--match_links` is used, you can stream output per-record so that results are written as they are scraped (useful if the program stops unexpectedly).
 
-python selenium_capture_links.py --sport football --leagues england-premier-league --seasons 2014-2015 --max-pages 3 --headless
+Recommended format for streaming: `jsonl` (JSON Lines), one JSON per line.
 
-Birden çok lig ve sezon (virgülle ayırın):
+Examples:
 
-python selenium_capture_links.py --sport football --leagues england-premier-league,spain-primera-division --seasons 2014-2015,2015-2016 --headless
+```bash
+# Read match links from CSV and stream to JSON Lines file
+uv run python src/main.py scrape_historic \
+  --sport football \
+  --match_links "capturelinks/premier_league_2014_2015.csv" \
+  --markets 1x2,btts \
+  --storage local \
+  --format jsonl \
+  --file_path outputs/premier_league_2014_2015 \
+  --headless
+
+# Alternatively, stream into a JSON list file (less efficient but supported)
+uv run python src/main.py scrape_historic \
+  --sport football \
+  --match_links "capturelinks/premier_league_2014_2015.csv" \
+  --markets 1x2 \
+  --storage local \
+  --format json \
+  --file_path outputs/premier_league_2014_2015 \
+  --headless
+```
+
+Notes:
+
+- `--match_links` overrides `--date` and `--leagues` and only scrapes the provided links (all links must belong to the same sport).
+- For JSONL, each scraped match is appended as a new line, ensuring partial results remain on disk if the process stops.
+- For JSON, the file is maintained as a JSON array and is updated per-record.
 
 #### **📌 Preview Mode**
 
@@ -285,7 +310,6 @@ The `--preview_submarkets_only` flag enables a faster scraping mode that extract
 To display all available CLI commands and options, run:
 
 `uv run python src/main.py --help`
-
 
 ### **🐳 Running Inside a Docker Container**
 
