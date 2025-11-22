@@ -1,4 +1,6 @@
 import logging
+import csv
+from pathlib import Path
 
 from src.cli.cli_argument_parser import CLIArgumentParser
 from src.cli.cli_argument_validator import CLIArgumentValidator
@@ -13,6 +15,52 @@ class CLIArgumentHandler:
     def parse_and_validate_args(self) -> dict:
         """Parses and validates command-line arguments, returning a structured dictionary."""
         args = self.parser.parse_args()
+
+        # Allow --match_links to accept a single CSV file path. If provided, load links from CSV.
+        try:
+            if getattr(args, "match_links", None):
+                # If user passed a single token and it's a path to an existing file, read it as CSV
+                if isinstance(args.match_links, list) and len(args.match_links) == 1:
+                    potential_path = Path(args.match_links[0])
+                    if potential_path.exists() and potential_path.is_file():
+                        loaded_links: list[str] = []
+                        with potential_path.open("r", encoding="utf-8", newline="") as f:
+                            sample = f.read(2048)
+                            f.seek(0)
+                            # Try DictReader first to honor headers
+                            try:
+                                reader = csv.DictReader(f)
+                                if reader.fieldnames:
+                                    header_lower = [h.strip().lower() for h in reader.fieldnames if h]
+                                    key = "match_link" if "match_link" in header_lower else reader.fieldnames[0]
+                                    f.seek(0)
+                                    reader = csv.DictReader(f)
+                                    for row in reader:
+                                        val = (row.get(key) or "").strip()
+                                        if val:
+                                            loaded_links.append(val)
+                                else:
+                                    # Fall back to simple CSV reader
+                                    f.seek(0)
+                                    reader2 = csv.reader(f)
+                                    for row in reader2:
+                                        if row and row[0].strip():
+                                            loaded_links.append(row[0].strip())
+                            except Exception:
+                                # Fallback to simple reader if DictReader fails
+                                f.seek(0)
+                                reader2 = csv.reader(f)
+                                for row in reader2:
+                                    if row and row[0].strip():
+                                        loaded_links.append(row[0].strip())
+
+                        # Replace args.match_links with the loaded list
+                        args.match_links = loaded_links
+                        self.logger.info(
+                            "Loaded %s match links from CSV: %s", len(loaded_links), potential_path
+                        )
+        except Exception as e:
+            self.logger.error("Failed to load match links from CSV: %s", e, exc_info=True)
 
         if not args.command:
             self.logger.error("No CLI args Command provided")
@@ -64,4 +112,5 @@ class CLIArgumentHandler:
             "target_bookmaker": getattr(args, "target_bookmaker", None),
             "scrape_odds_history": getattr(args, "scrape_odds_history", False),
             "preview_submarkets_only": getattr(args, "preview_submarkets_only", False),
+            "concurrency_tasks": getattr(args, "concurrency_tasks", None),
         }
